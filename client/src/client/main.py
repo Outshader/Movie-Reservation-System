@@ -1,78 +1,38 @@
-import curses
-from curses.textpad import Textbox
+import urwid
 
 
-arrows = [259, 258]  # curses.KEY_UP, curses.KEY_DOWN
-funcs = [49, 50]  # 1,2
-actions = [113]  # q
-enter = [10, 13]
+class Main:
+    def __init__(self) -> None:
+        self.credentials = None
+        self.main()
+
+    def handler_main(self, key):
+        if key in ["q", "Q"]:
+            raise urwid.ExitMainLoop()
+        elif key == "1":
+            self.login(key=None)
+
+    def login(self, key):
+        q1 = urwid.Edit("Email: ")
+        q2 = urwid.Edit("Password: ")
+        def submit_login(*args):
+            self.credentials = q1.edit_text, q2.edit_text
+            self.loop.widget = previous_screen
+
+        submit = urwid.widget.Button("Submit", submit_login)
+        login_walker = urwid.SimpleFocusListWalker([q1, q2, submit])
+        login_widget = urwid.ListBox(login_walker)
+        previous_screen = self.loop.widget
+        self.loop.widget = login_widget
 
 
-def term_main(stdscr):
-    stdscr.clear()
-    main_paint(stdscr)
+    def exit(self, key):
+        raise urwid.ExitMainLoop()
 
-    try:
-        while True:
-            key = stdscr.getch()
-            if key in arrows:
-                cursor_move(stdscr, key)
-            elif key in funcs:
-                match key:
-                    case 49:
-                        login_main(stdscr)
-                    case 50:
-                        return
-            elif key in actions:
-                match key:
-                    case 113:
-                        return
-    except KeyboardInterrupt:
-        return
-
-
-def login_main(stdscr):
-    user_input = login_paint(stdscr).split()
-    stdscr.addstr(0, 0, f"Input: {user_input!r}")
-
-
-def login_paint(stdscr):
-    stdscr.clear()
-    win = curses.newwin(2, 40, 2, 2)
-
-    textbox = Textbox(win)
-
-    def login_validator(key):  # key is autopassed
-        y, _ = win.getyx()
-        if key in enter and y == 1:
-            return 7
-        return key
-
-    win.addstr(0, 0, "Login: ")
-    win.addstr(1, 0, "Password: ")
-
-    textbox.edit(login_validator)
-
-    return textbox.gather()
-
-
-def cursor_move(stdscr, key):
-    y, x = stdscr.getyx()
-    if key == "KEY_DOWN":
-        if y < 1:
-            y = y + 1
-            stdscr.move(y, x)
-    else:
-        if y > 0:
-            y = y - 1
-            stdscr.move(y, x)
-    stdscr.refresh()
-
-
-def main_paint(stdscr):
-    stdscr.addstr(0, 0, "1) Login")
-    stdscr.addstr(1, 0, "2) Exit")
-
-
-def main():
-    curses.wrapper(term_main)
+    def main(self):
+        op1 = urwid.Button("login", on_press=self.login)
+        op2 = urwid.Button("exit", on_press=self.exit)
+        walker = urwid.SimpleFocusListWalker([op1, op2])
+        self.menu_widget = urwid.ListBox(walker)
+        self.loop = urwid.MainLoop(self.menu_widget, unhandled_input=self.handler_main)
+        self.loop.run()
